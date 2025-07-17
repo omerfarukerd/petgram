@@ -1,0 +1,79 @@
+import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
+import '../../data/models/user_model.dart';
+import '../../data/repositories/auth_repository.dart';
+
+class AuthProvider extends ChangeNotifier {
+  UserModel? _currentUser;
+  bool _isLoading = false;
+  String? _error;
+
+  UserModel? get currentUser => _currentUser;
+  bool get isLoading => _isLoading;
+  String? get error => _error;
+  bool get isAuthenticated => _currentUser != null;
+
+  String _getErrorMessage(dynamic error) {
+    if (error is firebase_auth.FirebaseAuthException) {
+      switch (error.code) {
+        case 'user-not-found':
+          return 'Kullanıcı bulunamadı';
+        case 'wrong-password':
+          return 'Hatalı şifre';
+        case 'email-already-in-use':
+          return 'Bu email zaten kullanımda';
+        case 'weak-password':
+          return 'Şifre çok zayıf';
+        case 'invalid-email':
+          return 'Geçersiz email adresi';
+        default:
+          return 'Bir hata oluştu: ${error.code}';
+      }
+    }
+    return error.toString();
+  }
+
+  Future<void> signUp({
+    required String email,
+    required String password,
+    required String username,
+  }) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      _currentUser = await AuthRepository.signUp(
+        email: email,
+        password: password,
+        username: username,
+      );
+    } catch (e) {
+      _error = _getErrorMessage(e);
+    }
+
+    _isLoading = false;
+    notifyListeners();
+  }
+
+  Future<void> signIn(String email, String password) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      _currentUser = await AuthRepository.signIn(email, password);
+    } catch (e) {
+      _error = _getErrorMessage(e);
+    }
+
+    _isLoading = false;
+    notifyListeners();
+  }
+
+  Future<void> signOut() async {
+    await AuthRepository.signOut();
+    _currentUser = null;
+    notifyListeners();
+  }
+}
