@@ -1,5 +1,5 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
 class FirebaseService {
@@ -15,7 +15,8 @@ class FirebaseService {
   static const String conversationsCollection = 'conversations';
   static const String messagesCollection = 'messages';
   static const String typingCollection = 'typing';
-  
+  static const String notificationsCollection = 'notifications'; // EKLENDİ
+
   // Auth Methods
   static Future<UserCredential> signUp(String email, String password) async {
     return await auth.createUserWithEmailAndPassword(

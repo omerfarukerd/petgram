@@ -36,7 +36,6 @@ class MessageProvider extends ChangeNotifier {
       notifyListeners();
     });
 
-    // Online status takibi - switchMap yerine asyncExpand kullanıldı
     _presenceSubscription?.cancel();
     _presenceSubscription = Stream.periodic(const Duration(seconds: 5))
         .asyncMap((_) async {
@@ -111,6 +110,47 @@ class MessageProvider extends ChangeNotifier {
       );
       _error = null;
     } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+    }
+  }
+  
+  // YENİ VE GÜNCELLENMİŞ: Mesaj İletme Fonksiyonu
+  Future<void> forwardMessage({
+    required String targetConversationId,
+    required MessageModel messageToForward,
+    required String senderId,
+  }) async {
+    try {
+      await MessageRepository.sendMessage(
+        conversationId: targetConversationId,
+        senderId: senderId,
+        type: messageToForward.type,
+        text: messageToForward.text,
+        mediaUrls: messageToForward.mediaUrls,
+        replyToId: null, // İletilen mesajlar yanıt taşımaz.
+      );
+    } catch(e) {
+      _error = e.toString();
+      notifyListeners();
+    }
+  }
+
+  Future<void> deleteMessage(String messageId) async {
+    if (_currentConversationId == null) return;
+    try {
+      await MessageRepository.deleteMessage(_currentConversationId!, messageId);
+    } catch(e) {
+      _error = e.toString();
+      notifyListeners();
+    }
+  }
+
+  Future<void> editMessage(String messageId, String newText) async {
+    if (_currentConversationId == null) return;
+    try {
+      await MessageRepository.editMessage(_currentConversationId!, messageId, newText);
+    } catch(e) {
       _error = e.toString();
       notifyListeners();
     }

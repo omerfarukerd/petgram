@@ -5,9 +5,11 @@ import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
 import '../../../data/models/story_model.dart';
 import '../../../data/models/user_model.dart';
+import '../../../data/models/message_model.dart'; // YENİ İMPORT
 import '../../../data/repositories/story_repository.dart';
 import '../../../data/repositories/user_repository.dart';
 import '../../providers/auth_provider.dart';
+import '../message/forward_message_screen.dart'; // YENİ İMPORT
 
 class StoryViewerScreen extends StatefulWidget {
   final List<StoryModel> stories;
@@ -91,6 +93,7 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
     _videoController?.dispose();
     _videoController = VideoPlayerController.networkUrl(Uri.parse(videoUrl))
       ..initialize().then((_) {
+        if (!mounted) return;
         setState(() {});
         _videoController!.play();
         _startTimer(_videoController!.value.duration.inSeconds);
@@ -191,6 +194,30 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
     }
   }
 
+  // YENİ: Hikayeyi paylaşma fonksiyonu
+  void _shareStory(BuildContext context) {
+    final story = widget.stories[_currentStoryIndex];
+    final storyItem = story.items[_currentItemIndex];
+    final user = _userCache[story.userId];
+
+    final messageToShare = MessageModel(
+      id: '',
+      conversationId: '',
+      senderId: '',
+      type: MessageType.storyReply, // Story paylaşımı bir nevi story yanıtıdır.
+      timestamp: DateTime.now(),
+      sharedContentId: story.id, 
+      sharedContentImageUrl: storyItem.mediaUrl,
+      sharedContentText: "${user?.username ?? 'Birinin'}'in hikayesine göz at",
+    );
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ForwardMessageScreen(messageToForward: messageToShare),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (widget.stories.isEmpty) {
@@ -204,8 +231,8 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
           final width = MediaQuery.of(context).size.width;
           if (details.localPosition.dx < width * 0.3) {
             _previousItem();
-          } else if (details.localPosition.dx > width * 0.7) {
-            _nextItem();
+          } else {
+             _nextItem();
           }
         },
         onLongPressStart: (_) => _pauseStory(),
@@ -264,10 +291,10 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
                           colors: [
-                            Colors.black.withValues(alpha: 0.5),
+                            Colors.black.withOpacity(0.5),
                             Colors.transparent,
                             Colors.transparent,
-                            Colors.black.withValues(alpha: 0.5),
+                            Colors.black.withOpacity(0.5),
                           ],
                           stops: const [0.0, 0.2, 0.8, 1.0],
                         ),
@@ -298,7 +325,7 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
                                   : index == _currentItemIndex
                                       ? _progressController.value
                                       : 0.0,
-                              backgroundColor: Colors.white.withValues(alpha: 0.3),
+                              backgroundColor: Colors.white.withOpacity(0.3),
                               valueColor: const AlwaysStoppedAnimation(Colors.white),
                             ),
                           ),
@@ -410,11 +437,11 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
                           ),
                           child: TextField(
                             style: const TextStyle(color: Colors.white),
-                            decoration: InputDecoration(
+                            decoration: const InputDecoration(
                               hintText: 'Mesaj gönder...',
-                              hintStyle: const TextStyle(color: Colors.white70),
+                              hintStyle: TextStyle(color: Colors.white70),
                               border: InputBorder.none,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                              contentPadding: EdgeInsets.symmetric(horizontal: 16),
                             ),
                             onSubmitted: (text) {
                               // DM gönder
@@ -429,11 +456,10 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
                           // Story'yi beğen
                         },
                       ),
+                      // GÜNCELLENDİ: Paylaş Butonu
                       IconButton(
                         icon: const Icon(Icons.send, color: Colors.white),
-                        onPressed: () {
-                          // Story'yi paylaş
-                        },
+                        onPressed: () => _shareStory(context),
                       ),
                     ],
                   ),

@@ -8,11 +8,13 @@ import '../../../data/repositories/user_repository.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/post_provider.dart';
 import '../../providers/message_provider.dart';
+import '../../providers/notification_provider.dart'; // YENİ
 import '../../widgets/post/post_item.dart';
 import '../../widgets/story/story_ring.dart';
 import '../story/story_viewer_screen.dart';
 import '../story/create_story_screen.dart';
 import '../message/chat_list_screen.dart';
+import '../notifications/notifications_screen.dart'; // YENİ
 
 class FeedTab extends StatefulWidget {
   const FeedTab({super.key});
@@ -25,13 +27,13 @@ class _FeedTabState extends State<FeedTab> {
   @override
   void initState() {
     super.initState();
-    // MessageProvider'ı başlat
+    // Provider'ları başlat
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final authProvider = context.read<AuthProvider>();
-      final messageProvider = context.read<MessageProvider>();
-      
       if (authProvider.currentUser != null) {
-        messageProvider.loadUserConversations(authProvider.currentUser!.uid);
+        final userId = authProvider.currentUser!.uid;
+        context.read<MessageProvider>().loadUserConversations(userId);
+        context.read<NotificationProvider>().getUserNotifications(userId); // YENİ
       }
     });
   }
@@ -47,10 +49,46 @@ class _FeedTabState extends State<FeedTab> {
       appBar: AppBar(
         title: const Text('PetGram'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.favorite_border),
-            onPressed: () {
-              // Bildirimler
+          // YENİ: Bildirim Butonu ve Sayacı
+          Consumer<NotificationProvider>(
+            builder: (context, notificationProvider, child) {
+              return Stack(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.favorite_border),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const NotificationsScreen()),
+                      );
+                    },
+                  ),
+                  if (notificationProvider.unreadCount > 0)
+                    Positioned(
+                      right: 8,
+                      top: 8,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 16,
+                          minHeight: 16,
+                        ),
+                        child: Text(
+                          '${notificationProvider.unreadCount}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                ],
+              );
             },
           ),
           IconButton(
@@ -75,7 +113,6 @@ class _FeedTabState extends State<FeedTab> {
       ),
       body: CustomScrollView(
         slivers: [
-          // Story listesi
           SliverToBoxAdapter(
             child: Container(
               height: 110,
@@ -95,7 +132,6 @@ class _FeedTabState extends State<FeedTab> {
                     padding: const EdgeInsets.symmetric(horizontal: 8),
                     itemCount: stories.length + 1,
                     itemBuilder: (context, index) {
-                      // İlk item her zaman current user
                       if (index == 0) {
                         final currentUserStory = stories.firstWhere(
                           (s) => s.userId == currentUserId,
@@ -154,7 +190,6 @@ class _FeedTabState extends State<FeedTab> {
                         );
                       }
                       
-                      // Diğer story'ler
                       final storyIndex = index - 1;
                       final otherStories = stories.where((s) => s.userId != currentUserId).toList();
                       
@@ -195,12 +230,10 @@ class _FeedTabState extends State<FeedTab> {
             ),
           ),
           
-          // Divider
           const SliverToBoxAdapter(
             child: Divider(height: 1),
           ),
           
-          // Post listesi
           StreamBuilder<List<PostModel>>(
             stream: postProvider.getFeedPosts(),
             builder: (context, snapshot) {

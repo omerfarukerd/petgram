@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../../core/utils/caption_parser.dart'; // YENİ
 import '../../../data/models/comment_model.dart';
 import '../../../data/repositories/comment_repository.dart';
 import '../../providers/auth_provider.dart';
@@ -31,6 +32,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
     );
 
     _commentController.clear();
+    FocusScope.of(context).unfocus(); // Klavyeyi kapat
   }
 
   @override
@@ -67,6 +69,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
                 }
 
                 return ListView.builder(
+                  padding: const EdgeInsets.only(top: 8),
                   itemCount: comments.length,
                   itemBuilder: (context, index) {
                     final comment = comments[index];
@@ -82,22 +85,23 @@ class _CommentsScreenState extends State<CommentsScreen> {
                             ? Text(comment.username[0].toUpperCase())
                             : null,
                       ),
+                      // GÜNCELLENDİ: CaptionParser kullanıldı
                       title: RichText(
                         text: TextSpan(
-                          style: const TextStyle(color: Colors.black),
+                          style: DefaultTextStyle.of(context).style,
                           children: [
                             TextSpan(
-                              text: comment.username,
+                              text: '${comment.username} ',
                               style: const TextStyle(fontWeight: FontWeight.bold),
                             ),
-                            const TextSpan(text: ' '),
-                            TextSpan(text: comment.text),
+                            // Yorum metni parser ile işleniyor
+                            ...CaptionParser(comment.text, context).parseText(),
                           ],
                         ),
                       ),
                       subtitle: Text(
                         _getTimeAgo(comment.createdAt),
-                        style: const TextStyle(fontSize: 12),
+                        style: const TextStyle(fontSize: 12, color: Colors.grey),
                       ),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -134,34 +138,29 @@ class _CommentsScreenState extends State<CommentsScreen> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withOpacity(0.1),
-                  spreadRadius: 1,
-                  blurRadius: 3,
-                  offset: const Offset(0, -1),
-                ),
-              ],
+              color: Theme.of(context).scaffoldBackgroundColor,
+              border: Border(top: BorderSide(color: Colors.grey[200]!)),
             ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _commentController,
-                    decoration: const InputDecoration(
-                      hintText: 'Yorum ekle...',
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.symmetric(horizontal: 16),
+            child: SafeArea(
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _commentController,
+                      decoration: const InputDecoration(
+                        hintText: 'Yorum ekle...',
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(horizontal: 16),
+                      ),
+                      maxLines: null,
                     ),
-                    maxLines: null,
                   ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.send),
-                  onPressed: _addComment,
-                ),
-              ],
+                  IconButton(
+                    icon: const Icon(Icons.send),
+                    onPressed: _addComment,
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -173,13 +172,13 @@ class _CommentsScreenState extends State<CommentsScreen> {
     final difference = DateTime.now().difference(time);
     
     if (difference.inDays > 7) {
-      return '${difference.inDays ~/ 7}h önce';
+      return '${difference.inDays ~/ 7}hft';
     } else if (difference.inDays > 0) {
-      return '${difference.inDays}g önce';
+      return '${difference.inDays}g';
     } else if (difference.inHours > 0) {
-      return '${difference.inHours}s önce';
+      return '${difference.inHours}s';
     } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes}d önce';
+      return '${difference.inMinutes}d';
     } else {
       return 'Şimdi';
     }

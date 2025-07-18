@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
+import '../../../core/utils/caption_parser.dart'; // YENİ
+import '../../../data/models/message_model.dart';
 import '../../../data/models/post_model.dart';
+import '../../screens/message/forward_message_screen.dart';
 import '../../screens/post/comments_screen.dart';
 
 class PostItem extends StatefulWidget {
@@ -62,7 +65,6 @@ class _PostItemState extends State<PostItem> {
   void _onPageChanged(int index) {
     setState(() => _currentIndex = index);
     
-    // Video kontrolü
     for (int i = 0; i < _videoControllers.length; i++) {
       if (_videoControllers[i] != null) {
         if (i == index) {
@@ -74,6 +76,25 @@ class _PostItemState extends State<PostItem> {
     }
   }
 
+  void _sharePost(BuildContext context) {
+    final messageToShare = MessageModel(
+      id: '',
+      conversationId: '',
+      senderId: '',
+      type: MessageType.postShare,
+      timestamp: DateTime.now(),
+      sharedContentId: widget.post.id,
+      sharedContentImageUrl: widget.post.mediaItems.first.url,
+      sharedContentText: widget.post.caption ?? 'Bir gönderiye göz at',
+    );
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ForwardMessageScreen(messageToForward: messageToShare),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -81,7 +102,6 @@ class _PostItemState extends State<PostItem> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Media carousel
           SizedBox(
             height: 400,
             child: Stack(
@@ -141,7 +161,6 @@ class _PostItemState extends State<PostItem> {
                                 );
                               },
                             ),
-                          // Play icon for paused videos
                           if (media.isVideo && 
                               _videoControllers[index] != null &&
                               _videoControllers[index]!.value.isInitialized &&
@@ -156,7 +175,6 @@ class _PostItemState extends State<PostItem> {
                     );
                   },
                 ),
-                // Sayaç
                 if (widget.post.mediaItems.length > 1)
                   Positioned(
                     top: 16,
@@ -173,7 +191,6 @@ class _PostItemState extends State<PostItem> {
                       ),
                     ),
                   ),
-                // Nokta göstergeleri
                 if (widget.post.mediaItems.length > 1)
                   Positioned(
                     bottom: 8,
@@ -191,7 +208,7 @@ class _PostItemState extends State<PostItem> {
                             shape: BoxShape.circle,
                             color: _currentIndex == index
                                 ? Colors.blue
-                                : Colors.grey.withValues(alpha: 0.5),
+                                : Colors.grey.withOpacity(0.7),
                           ),
                         ),
                       ),
@@ -200,9 +217,8 @@ class _PostItemState extends State<PostItem> {
               ],
             ),
           ),
-          // Interaction buttons
           Padding(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(8.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -215,7 +231,6 @@ class _PostItemState extends State<PostItem> {
                       ),
                       onPressed: widget.onLike,
                     ),
-                    Text('${widget.post.likes.length} beğeni'),
                     IconButton(
                       icon: const Icon(Icons.comment_outlined),
                       onPressed: () {
@@ -227,17 +242,50 @@ class _PostItemState extends State<PostItem> {
                         );
                       },
                     ),
-                    Text('${widget.post.commentCount} yorum'),
+                    IconButton(
+                      icon: const Icon(Icons.send_outlined),
+                      onPressed: () => _sharePost(context),
+                    ),
                     const Spacer(),
                     if (widget.post.isAdoption)
                       const Chip(label: Text('Sahiplenme')),
                   ],
                 ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  child: Text(
+                    '${widget.post.likes.length} beğeni',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                // GÜNCELLENDİ: Caption metni RichText ile gösteriliyor
                 if (widget.post.caption != null && widget.post.caption!.isNotEmpty)
                   Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Text(widget.post.caption!),
+                    padding: const EdgeInsets.only(top: 4, left: 8, right: 8),
+                    child: RichText(
+                      text: TextSpan(
+                        style: DefaultTextStyle.of(context).style.copyWith(fontSize: 14),
+                        children: CaptionParser(widget.post.caption!, context).parseText(),
+                      ),
+                    ),
                   ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                  child: GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => CommentsScreen(postId: widget.post.id),
+                        ),
+                      );
+                    },
+                    child: Text(
+                      '${widget.post.commentCount} yorumun tümünü gör',
+                      style: TextStyle(color: Colors.grey[600]),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),

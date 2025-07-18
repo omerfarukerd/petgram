@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../data/models/user_model.dart';
 import '../../../data/models/message_model.dart';
@@ -8,50 +9,84 @@ import '../../widgets/message/message_bubble.dart';
 import '../../widgets/message/message_input.dart';
 import '../../widgets/message/typing_indicator.dart';
 import 'call_screen.dart';
+import 'forward_message_screen.dart';
+import 'message_info_screen.dart'; // YENİ İMPORT
 
 class ChatDetailScreen extends StatefulWidget {
-  final String conversationId;
-  final UserModel otherUser;
+ final String conversationId;
+ final UserModel otherUser;
 
-  const ChatDetailScreen({
-    super.key,
-    required this.conversationId,
-    required this.otherUser,
-  });
+ const ChatDetailScreen({
+  super.key,
+  required this.conversationId,
+  required this.otherUser,
+ });
 
-  @override
-  State<ChatDetailScreen> createState() => _ChatDetailScreenState();
+ @override
+ State<ChatDetailScreen> createState() => _ChatDetailScreenState();
 }
 
 class _ChatDetailScreenState extends State<ChatDetailScreen> {
-  MessageModel? _replyTo;
+ MessageModel? _replyTo;
 
-  @override
-  void initState() {
-    super.initState();
-    final messageProvider = context.read<MessageProvider>();
-    final authProvider = context.read<AuthProvider>();
-    
-    messageProvider.loadMessages(widget.conversationId);
-    messageProvider.markMessagesAsRead(authProvider.currentUser?.uid ?? '');
-  }
+ @override
+ void initState() {
+  super.initState();
+  final messageProvider = context.read<MessageProvider>();
+  final authProvider = context.read<AuthProvider>();
+  
+  messageProvider.loadMessages(widget.conversationId);
+  messageProvider.markMessagesAsRead(authProvider.currentUser?.uid ?? '');
+ }
+ 
+ void _startCall(bool isVideo) {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => CallScreen(
+        channelName: widget.conversationId,
+        token: 'GENERATE_FROM_SERVER', // Bu token sunucudan alınmalıdır.
+        isVideo: isVideo,
+        callerName: widget.otherUser.username,
+      ),
+    ),
+  );
+ }
+ 
+ void _handleDeleteMessage(MessageModel message) {
+    showDialog(context: context, builder: (context) => AlertDialog(title: const Text('Mesajı Sil'), content: const Text('Bu mesajı silmek istediğinizden emin misiniz?'), actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('İptal')), TextButton(onPressed: () {context.read<MessageProvider>().deleteMessage(message.id); Navigator.pop(context);}, child: const Text('Sil', style: TextStyle(color: Colors.red)))]));
+ }
 
-  void _startCall(bool isVideo) {
+ void _handleEditMessage(MessageModel message) {
+    final textController = TextEditingController(text: message.text);
+    showDialog(context: context, builder: (context) => AlertDialog(title: const Text('Mesajı Düzenle'), content: TextField(controller: textController, autofocus: true, maxLines: null), actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('İptal')), TextButton(onPressed: () {final newText = textController.text.trim(); if (newText.isNotEmpty) {context.read<MessageProvider>().editMessage(message.id, newText);} Navigator.pop(context);}, child: const Text('Kaydet'))]));
+ }
+ 
+ void _handleReplyMessage(MessageModel message) {
+    setState(() => _replyTo = message);
+ }
+
+ void _handleCopyMessage(MessageModel message) {
+    Clipboard.setData(ClipboardData(text: message.text ?? ''));
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Mesaj kopyalandı!')));
+ }
+
+ void _handleForwardMessage(MessageModel message) {
+    Navigator.push(context, MaterialPageRoute(builder: (context) => ForwardMessageScreen(messageToForward: message)));
+ }
+
+ // GÜNCELLENDİ
+ void _handleMessageInfo(MessageModel message) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => CallScreen(
-          channelName: widget.conversationId,
-          token: 'GENERATE_FROM_SERVER',
-          isVideo: isVideo,
-          callerName: widget.otherUser.username,
-        ),
+        builder: (context) => MessageInfoScreen(message: message),
       ),
     );
-  }
+ }
 
-  @override
-  Widget build(BuildContext context) {
+ @override
+ Widget build(BuildContext context) {
     final messageProvider = context.watch<MessageProvider>();
     final authProvider = context.watch<AuthProvider>();
     final currentUserId = authProvider.currentUser?.uid ?? '';
@@ -109,23 +144,15 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                 final message = messageProvider.currentMessages[index];
                 final isMe = message.senderId == currentUserId;
                 
-                return Dismissible(
-                  key: Key(message.id),
-                  direction: isMe ? DismissDirection.endToStart : DismissDirection.startToEnd,
-                  background: Container(
-                    alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-                    padding: EdgeInsets.symmetric(horizontal: 20),
-                    color: Colors.blue,
-                    child: Icon(Icons.reply, color: Colors.white),
-                  ),
-                  confirmDismiss: (direction) async {
-                    setState(() => _replyTo = message);
-                    return false;
-                  },
-                  child: MessageBubble(
-                    message: message,
-                    isMe: isMe,
-                  ),
+                return MessageBubble(
+                  message: message,
+                  isMe: isMe,
+                  onReply: _handleReplyMessage,
+                  onEdit: _handleEditMessage,
+                  onDelete: _handleDeleteMessage,
+                  onCopy: _handleCopyMessage,
+                  onForward: _handleForwardMessage,
+                  onInfo: _handleMessageInfo,
                 );
               },
             ),
@@ -133,13 +160,14 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           MessageInput(
             replyTo: _replyTo,
             onCancelReply: () => setState(() => _replyTo = null),
-            onSendMessage: (text, replyToId) async {
-              await messageProvider.sendMessage(
+            onSendMessage: (text, replyToId) {
+              messageProvider.sendMessage(
                 senderId: currentUserId,
                 type: MessageType.text,
                 text: text,
                 replyToId: replyToId,
               );
+              setState(() => _replyTo = null);
             },
             onTypingChanged: (isTyping) {
               messageProvider.setTypingStatus(currentUserId, isTyping);
@@ -148,5 +176,5 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         ],
       ),
     );
-  }
+ }
 }

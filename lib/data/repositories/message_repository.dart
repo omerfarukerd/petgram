@@ -1,9 +1,15 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:uuid/uuid.dart';
 import '../models/conversation_model.dart';
 import '../models/message_model.dart';
+import '../models/notification_model.dart';
 import '../services/firebase_service.dart';
+import 'notification_repository.dart';
 
 class MessageRepository {
+  static const _uuid = Uuid();
+
+  // HATA DÜZELTİLDİ: Conversation_model -> ConversationModel
   static Stream<List<ConversationModel>> getUserConversations(String userId) {
     return FirebaseService.firestore
         .collection(FirebaseService.conversationsCollection)
@@ -66,7 +72,7 @@ class MessageRepository {
     required MessageType type,
     String? text,
     List<String>? mediaUrls,
-    String? replyToId, // YENİ
+    String? replyToId,
   }) async {
     final batch = FirebaseService.firestore.batch();
     
@@ -84,16 +90,14 @@ class MessageRepository {
       text: text,
       mediaUrls: mediaUrls,
       timestamp: DateTime.now(),
-      replyToId: replyToId, // YENİ
+      replyToId: replyToId,
     );
 
     batch.set(messageRef, message.toJson());
-
-    // Update conversation
+    
+    final conversationRef = FirebaseService.firestore.collection(FirebaseService.conversationsCollection).doc(conversationId);
     batch.update(
-      FirebaseService.firestore
-          .collection(FirebaseService.conversationsCollection)
-          .doc(conversationId),
+      conversationRef,
       {
         'lastMessage': message.toJson(),
         'lastMessageTime': message.timestamp.toIso8601String(),
@@ -101,31 +105,66 @@ class MessageRepository {
     );
 
     await batch.commit();
+
+    // Yeni mesaj bildirimi oluşturma
+    final convDoc = await conversationRef.get();
+    if (convDoc.exists) {
+      final conversation = ConversationModel.fromJson(convDoc.data()!);
+      for (final participantId in conversation.participants) {
+        if (participantId != senderId) {
+          final notification = NotificationModel(
+            id: _uuid.v4(),
+            userId: participantId,
+            type: NotificationType.newMessage,
+            fromUserId: senderId,
+            timestamp: DateTime.now(),
+          );
+          await NotificationRepository.createNotification(notification);
+        }
+      }
+    }
+  }
+
+  static Future<void> deleteMessage(String conversationId, String messageId) async {
+    await FirebaseService.firestore
+      .collection(FirebaseService.messagesCollection)
+      .doc(conversationId)
+      .collection('messages')
+      .doc(messageId)
+      .delete();
+  }
+
+  static Future<void> editMessage(String conversationId, String messageId, String newText) async {
+    await FirebaseService.firestore
+      .collection(FirebaseService.messagesCollection)
+      .doc(conversationId)
+      .collection('messages')
+      .doc(messageId)
+      .update({
+        'text': newText,
+        'isEdited': true,
+        'editedAt': DateTime.now().toIso8601String(),
+      });
   }
 
   static Future<void> markAsRead(String conversationId, String userId) async {
-    final messages = await FirebaseService.firestore
+    final messagesQuery = await FirebaseService.firestore
         .collection(FirebaseService.messagesCollection)
         .doc(conversationId)
         .collection('messages')
-        .where('readBy', whereNotIn: [[userId]])
+        .where('readBy.$userId', isNull: true)
         .get();
 
     final batch = FirebaseService.firestore.batch();
+    final readTimestamp = DateTime.now().toIso8601String();
 
-    for (final doc in messages.docs) {
-      batch.update(doc.reference, {
-        'readBy': FieldValue.arrayUnion([userId]),
-      });
+    for (final doc in messagesQuery.docs) {
+      batch.update(doc.reference, {'readBy.$userId': readTimestamp});
     }
 
     batch.update(
-      FirebaseService.firestore
-          .collection(FirebaseService.conversationsCollection)
-          .doc(conversationId),
-      {
-        'unreadCount.$userId': 0,
-      },
+      FirebaseService.firestore.collection(FirebaseService.conversationsCollection).doc(conversationId),
+      {'unreadCount.$userId': 0},
     );
 
     await batch.commit();
@@ -159,16 +198,12 @@ class MessageRepository {
       await FirebaseService.firestore
           .collection(FirebaseService.typingCollection)
           .doc(conversationId)
-          .set({
-        userId: DateTime.now().toIso8601String(),
-      }, SetOptions(merge: true));
+          .set({userId: DateTime.now().toIso8601String()}, SetOptions(merge: true));
     } else {
       await FirebaseService.firestore
           .collection(FirebaseService.typingCollection)
           .doc(conversationId)
-          .update({
-        userId: FieldValue.delete(),
-      });
+          .update({userId: FieldValue.delete()});
     }
   }
 
@@ -183,9 +218,7 @@ class MessageRepository {
         .doc(conversationId)
         .collection('messages')
         .doc(messageId)
-        .update({
-      'reactions.$userId': emoji,
-    });
+        .update({'reactions.$userId': emoji});
   }
 
   static Future<void> removeReaction({
@@ -198,8 +231,6 @@ class MessageRepository {
         .doc(conversationId)
         .collection('messages')
         .doc(messageId)
-        .update({
-      'reactions.$userId': FieldValue.delete(),
-    });
+        .update({'reactions.$userId': FieldValue.delete()});
   }
 }

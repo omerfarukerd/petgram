@@ -1,9 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:uuid/uuid.dart';
 import '../models/user_model.dart';
 import '../models/post_model.dart';
+import '../models/notification_model.dart';
 import '../services/firebase_service.dart';
+import 'notification_repository.dart';
 
 class UserRepository {
+  static const _uuid = Uuid();
+
   static Future<UserModel?> getUser(String userId) async {
     try {
       final doc = await FirebaseService.firestore
@@ -17,6 +22,41 @@ class UserRepository {
       return null;
     } catch (e) {
       throw Exception('Kullanıcı bulunamadı: $e');
+    }
+  }
+
+  // YENİ: Kullanıcı adına göre kullanıcı getiren fonksiyon
+  static Future<UserModel?> getUserByUsername(String username) async {
+    try {
+      final querySnapshot = await FirebaseService.firestore
+          .collection(FirebaseService.usersCollection)
+          .where('username', isEqualTo: username)
+          .limit(1)
+          .get();
+      if (querySnapshot.docs.isNotEmpty) {
+        return UserModel.fromJson(querySnapshot.docs.first.data());
+      }
+      return null;
+    } catch (e) {
+      print('Kullanıcı adı ile arama hatası: $e');
+      return null;
+    }
+  }
+
+  static Future<List<UserModel>> getMultipleUsers(List<String> userIds) async {
+    if (userIds.isEmpty) {
+      return [];
+    }
+    try {
+      final querySnapshot = await FirebaseService.firestore
+          .collection(FirebaseService.usersCollection)
+          .where(FieldPath.documentId, whereIn: userIds)
+          .get();
+      return querySnapshot.docs
+          .map((doc) => UserModel.fromJson(doc.data()))
+          .toList();
+    } catch (e) {
+      throw Exception('Kullanıcılar getirilemedi: $e');
     }
   }
 
@@ -36,7 +76,6 @@ class UserRepository {
   static Future<void> followUser(String currentUserId, String targetUserId) async {
     final batch = FirebaseService.firestore.batch();
     
-    // Current user'ın following listesine ekle
     batch.update(
       FirebaseService.firestore
           .collection(FirebaseService.usersCollection)
@@ -46,7 +85,6 @@ class UserRepository {
       },
     );
     
-    // Target user'ın followers listesine ekle
     batch.update(
       FirebaseService.firestore
           .collection(FirebaseService.usersCollection)
@@ -57,12 +95,20 @@ class UserRepository {
     );
     
     await batch.commit();
+
+    final notification = NotificationModel(
+      id: _uuid.v4(),
+      userId: targetUserId,
+      type: NotificationType.follow,
+      fromUserId: currentUserId,
+      timestamp: DateTime.now(),
+    );
+    await NotificationRepository.createNotification(notification);
   }
 
   static Future<void> unfollowUser(String currentUserId, String targetUserId) async {
     final batch = FirebaseService.firestore.batch();
     
-    // Current user'ın following listesinden çıkar
     batch.update(
       FirebaseService.firestore
           .collection(FirebaseService.usersCollection)
@@ -72,7 +118,6 @@ class UserRepository {
       },
     );
     
-    // Target user'ın followers listesinden çıkar
     batch.update(
       FirebaseService.firestore
           .collection(FirebaseService.usersCollection)
