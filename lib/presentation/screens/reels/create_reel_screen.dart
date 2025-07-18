@@ -186,78 +186,83 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
               ),
               const SizedBox(height: 16),
               Expanded(
-                child: ListView.builder(
-                  controller: scrollController,
-                  itemCount: _searchResults.isNotEmpty
-                      ? _searchResults.length
-                      : _trendingMusic.length,
-                  itemBuilder: (context, index) {
-                    final music = _searchResults.isNotEmpty
-                        ? _searchResults[index]
-                        : _trendingMusic[index];
-                    final isSelected = _selectedMusic?.id == music.id;
-                    
-                    return ListTile(
-                      leading: Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[300],
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: music.coverUrl != null
-                            ? Image.network(music.coverUrl!, fit: BoxFit.cover)
-                            : const Icon(Icons.music_note),
-                      ),
-                      title: Text(music.name),
-                      subtitle: music.artist.isNotEmpty
-                          ? Text(music.artist)
-                          : null,
-                      trailing: isSelected
-                          ? const Icon(Icons.check, color: Colors.blue)
-                          : Text(
-                              '${music.useCount}',
-                              style: TextStyle(color: Colors.grey[600]),
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: ListView.builder(
+                        controller: scrollController,
+                        itemCount: _searchResults.isNotEmpty
+                            ? _searchResults.length
+                            : _trendingMusic.length,
+                        itemBuilder: (context, index) {
+                          final music = _searchResults.isNotEmpty
+                              ? _searchResults[index]
+                              : _trendingMusic[index];
+                          final isSelected = _selectedMusic?.id == music.id;
+                          
+                          return ListTile(
+                            leading: Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                color: Colors.grey[300],
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: music.coverUrl != null
+                                  ? Image.network(music.coverUrl!, fit: BoxFit.cover)
+                                  : const Icon(Icons.music_note),
                             ),
-                          ListTile(
-                            leading: const Icon(Icons.mic, color: Colors.red),
-                            title: const Text('Sesimi Kaydet'),
+                            title: Text(music.name),
+                            subtitle: music.artist.isNotEmpty
+                                ? Text(music.artist)
+                                : null,
+                            trailing: isSelected
+                                ? const Icon(Icons.check, color: Colors.blue)
+                                : Text(
+                                    '${music.useCount}',
+                                    style: TextStyle(color: Colors.grey[600]),
+                                  ),
                             onTap: () {
+                              setState(() {
+                                _selectedMusic = music;
+                              });
                               Navigator.pop(context);
-                              // Ses kayıt ekranına git
-                              _recordOriginalSound();
                             },
-                          ),
-                      onTap: () {
-                        setState(() {
-                          _selectedMusic = music;
-                        });
+                          );
+                        },
+                      ),
+                    ),
+                    const Divider(),
+                    ListTile(
+                      leading: const Icon(Icons.add_circle_outline, color: Colors.blue),
+                      title: const Text('Yeni Müzik Ekle'),
+                      onTap: () async {
                         Navigator.pop(context);
+                        final newMusic = await Navigator.push<MusicModel>(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const UserMusicUploadScreen(),
+                          ),
+                        );
+                        if (newMusic != null) {
+                          setState(() {
+                            _selectedMusic = newMusic;
+                          });
+                        }
                       },
-                    );
-                  },
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.mic, color: Colors.red),
+                      title: const Text('Sesimi Kaydet'),
+                      onTap: () {
+                        Navigator.pop(context);
+                        _recordOriginalSound();
+                      },
+                    ),
+                  ],
                 ),
               ),
             ],
-          ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.add_circle_outline, color: Colors.blue),
-            title: const Text('Yeni Müzik Ekle'),
-            onTap: () async {
-              Navigator.pop(context);
-              final newMusic = await Navigator.push<MusicModel>(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const UserMusicUploadScreen(),
-                ),
-              );
-              if (newMusic != null) {
-                setState(() {
-                  _selectedMusic = newMusic;
-                });
-              }
-            },
           ),
         ),
       ),

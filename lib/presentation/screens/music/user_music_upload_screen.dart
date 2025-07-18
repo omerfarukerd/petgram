@@ -42,6 +42,8 @@ class _UserMusicUploadScreenState extends State<UserMusicUploadScreen> {
       });
     }
   }
+
+  Future<void> _pickCoverImage() async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
     

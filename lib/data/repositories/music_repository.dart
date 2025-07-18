@@ -24,6 +24,38 @@ class MusicModel {
     this.userId,
     this.isOriginalSound = false,
     this.isPrivate = false,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'artist': artist,
+    'coverUrl': coverUrl,
+    'audioUrl': audioUrl,
+    'useCount': useCount,
+    'createdAt': createdAt.toIso8601String(),
+    'userId': userId,
+    'isOriginalSound': isOriginalSound,
+    'isPrivate': isPrivate,
+  };
+
+  factory MusicModel.fromJson(Map<String, dynamic> json) => MusicModel(
+    id: json['id'],
+    name: json['name'],
+    artist: json['artist'],
+    coverUrl: json['coverUrl'],
+    audioUrl: json['audioUrl'],
+    useCount: json['useCount'] ?? 0,
+    createdAt: DateTime.parse(json['createdAt']),
+    userId: json['userId'],
+    isOriginalSound: json['isOriginalSound'] ?? false,
+    isPrivate: json['isPrivate'] ?? false,
+  );
+}
+
+class MusicRepository {
+  static const String musicCollection = 'music';
+
   static Stream<List<MusicModel>> getUserMusic(String userId) {
     return FirebaseService.firestore
         .collection(musicCollection)
@@ -61,37 +93,7 @@ class MusicModel {
       });
     })
     .asyncExpand((future) => Stream.fromFuture(future));
-  });
-
-  Map<String, dynamic> toJson() => {
-    'id': id,
-    'name': name,
-    'artist': artist,
-    'coverUrl': coverUrl,
-    'audioUrl': audioUrl,
-    'useCount': useCount,
-    'createdAt': createdAt.toIso8601String(),
-    'userId': userId,
-    'isOriginalSound': isOriginalSound,
-    'isPrivate': isPrivate,
-  };
-
-  factory MusicModel.fromJson(Map<String, dynamic> json) => MusicModel(
-    id: json['id'],
-    name: json['name'],
-    artist: json['artist'],
-    coverUrl: json['coverUrl'],
-    audioUrl: json['audioUrl'],
-    useCount: json['useCount'] ?? 0,
-    createdAt: DateTime.parse(json['createdAt']),
-    userId: json['userId'],
-    isOriginalSound: json['isOriginalSound'] ?? false,
-    isPrivate: json['isPrivate'] ?? false,
-  );
-}
-
-class MusicRepository {
-  static const String musicCollection = 'music';
+  }
 
   static Future<List<MusicModel>> getTrendingMusic() async {
     final snapshot = await FirebaseService.firestore
