@@ -9,7 +9,7 @@ import agora_rtc_engine
 import audio_session
 import cloud_firestore
 import connectivity_plus
-import ffmpeg_kit_flutter
+import ffmpeg_kit_flutter_new
 import file_selector_macos
 import firebase_auth
 import firebase_core
