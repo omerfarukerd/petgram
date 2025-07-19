@@ -73,19 +73,23 @@ class PostModel {
 class MediaItem {
   final String url;
   final bool isVideo;
+  final String? thumbnailUrl;
 
   MediaItem({
     required this.url,
     required this.isVideo,
+    this.thumbnailUrl,
   });
 
   Map<String, dynamic> toJson() => {
     'url': url,
     'isVideo': isVideo,
+    'thumbnailUrl': thumbnailUrl,
   };
 
   factory MediaItem.fromJson(Map<String, dynamic> json) => MediaItem(
     url: json['url'],
     isVideo: json['isVideo'] ?? false,
+    thumbnailUrl: json['thumbnailUrl'],
   );
 }

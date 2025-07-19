@@ -21,9 +21,11 @@ class ExploreGridItem extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          // Medya
+          // Medya - Video için thumbnail kontrolü eklendi
           CachedNetworkImage(
-            imageUrl: firstMedia.url,
+            imageUrl: firstMedia.isVideo && firstMedia.thumbnailUrl != null 
+              ? firstMedia.thumbnailUrl! 
+              : firstMedia.url,
             fit: BoxFit.cover,
             placeholder: (context, url) => Container(
               color: Colors.grey[300],
@@ -37,7 +39,7 @@ class ExploreGridItem extends StatelessWidget {
             ),
           ),
           
-          // Gradient overlay (hover effect için)
+          // Gradient overlay
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(

@@ -22,6 +22,7 @@ class PostProvider extends ChangeNotifier {
     required List<bool> isVideoList,
     String? caption,
     bool isAdoption = false,
+    List<String?>? thumbnailUrls,
   }) async {
     _isLoading = true;
     _error = null;
@@ -34,6 +35,7 @@ class PostProvider extends ChangeNotifier {
         isVideoList: isVideoList,
         caption: caption,
         isAdoption: isAdoption,
+        thumbnailUrls: thumbnailUrls,
       );
     } catch (e) {
       _error = e.toString();

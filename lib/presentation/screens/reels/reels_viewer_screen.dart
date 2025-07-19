@@ -63,11 +63,14 @@ class _ReelVideoPlayerState extends State<ReelVideoPlayer> {
   late VideoPlayerController _videoController;
   Future<UserModel?>? _userFuture;
   bool _isPlaying = true;
+  String? _thumbnailUrl;
+
 
   @override
   void initState() {
     super.initState();
     _userFuture = UserRepository.getUser(widget.reel.userId);
+     _thumbnailUrl = widget.reel.mediaItems.first.thumbnailUrl;
     _videoController = VideoPlayerController.networkUrl(
       Uri.parse(widget.reel.mediaItems.first.url),
     )..initialize().then((_) {
@@ -113,8 +116,17 @@ class _ReelVideoPlayerState extends State<ReelVideoPlayer> {
                 child: VideoPlayer(_videoController),
               ),
             )
-          else
-            const Center(child: CircularProgressIndicator(color: Colors.white)),
+          else if (_thumbnailUrl != null)
+  Image.network(
+    _thumbnailUrl!,
+    fit: BoxFit.cover,
+    loadingBuilder: (context, child, loadingProgress) {
+      if (loadingProgress == null) return child;
+      return const Center(child: CircularProgressIndicator(color: Colors.white));
+    },
+  )
+else
+  const Center(child: CircularProgressIndicator(color: Colors.white)),
             
           if (!_isPlaying)
             const Center(

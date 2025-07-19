@@ -17,6 +17,7 @@ class PostRepository {
     required List<bool> isVideoList,
     String? caption,
     bool isAdoption = false,
+    List<String?>? thumbnailUrls, 
   }) async {
     try {
       List<MediaItem> mediaItems = [];
@@ -27,7 +28,7 @@ class PostRepository {
           'posts', 
           isVideoList[i]
         );
-        mediaItems.add(MediaItem(url: url, isVideo: isVideoList[i]));
+        mediaItems.add(MediaItem(url: url, isVideo: isVideoList[i],thumbnailUrl: thumbnailUrls?[i], ));
       }
       
       final post = PostModel(

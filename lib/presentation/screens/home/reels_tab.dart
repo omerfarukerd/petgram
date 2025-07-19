@@ -65,7 +65,7 @@ class ReelsTab extends StatelessWidget {
                       color: Colors.black,
                       child: Center(
                         child: Image.network(
-                          reel.mediaItems.first.url,
+                          reel.mediaItems.first.thumbnailUrl ?? reel.mediaItems.first.url,
                           fit: BoxFit.cover,
                           errorBuilder: (context, error, stackTrace) {
                             return const Icon(

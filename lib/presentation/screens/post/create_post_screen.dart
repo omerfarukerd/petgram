@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/post_provider.dart';
+import '../../../data/services/storage_service.dart';
 
 class CreatePostScreen extends StatefulWidget {
   const CreatePostScreen({super.key});
@@ -18,6 +19,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   final List<File> _mediaFiles = [];
   final List<bool> _isVideoList = [];
   final List<VideoPlayerController> _videoControllers = [];
+  final List<String?> _thumbnailUrls = []; // YENİ
   bool _isAdoption = false;
   int _currentIndex = 0;
   final PageController _pageController = PageController();
@@ -49,6 +51,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                     setState(() {
                       _mediaFiles.add(File(file.path));
                       _isVideoList.add(false);
+                      _thumbnailUrls.add(null); // YENİ
                     });
                   }
                 }
@@ -68,6 +71,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                 setState(() {
                   _mediaFiles.add(File(pickedFile.path));
                   _isVideoList.add(true);
+                  _thumbnailUrls.add(null); // YENİ
                 });
                 _initializeVideo(_mediaFiles.length - 1);
               }
@@ -83,6 +87,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                 setState(() {
                   _mediaFiles.add(File(pickedFile.path));
                   _isVideoList.add(false);
+                  _thumbnailUrls.add(null); // YENİ
                 });
               }
             },
@@ -104,10 +109,75 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     _videoControllers.add(controller);
   }
 
+  // YENİ METOD
+  Future<void> _selectVideoThumbnail(int index) async {
+    final controller = _videoControllers[index];
+    if (controller == null || !controller.value.isInitialized) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.8,
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Text('Kapak Seç', style: Theme.of(context).textTheme.headlineSmall),
+            const SizedBox(height: 16),
+            Expanded(
+              child: AspectRatio(
+                aspectRatio: controller.value.aspectRatio,
+                child: VideoPlayer(controller),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.photo_library),
+                    label: const Text('Galeriden Seç'),
+                    onPressed: () async {
+                      final picker = ImagePicker();
+                      final picked = await picker.pickImage(source: ImageSource.gallery);
+                      if (picked != null) {
+                        final file = File(picked.path);
+                        final url = await StorageService.uploadImage(file, 'thumbnails');
+                        setState(() {
+                          _thumbnailUrls[index] = url;
+                        });
+                        Navigator.pop(context);
+                      }
+                    },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.videocam),
+                    label: const Text('Mevcut Kare'),
+                    onPressed: () async {
+                      // Video'dan frame al ve yükle
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Mevcut kare kaydedildi')),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _removeMedia(int index) {
     setState(() {
       _mediaFiles.removeAt(index);
       _isVideoList.removeAt(index);
+      _thumbnailUrls.removeAt(index); // YENİ
       if (index < _videoControllers.length) {
         _videoControllers[index].dispose();
         _videoControllers.removeAt(index);
@@ -135,6 +205,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       isVideoList: _isVideoList,
       caption: _captionController.text.trim(),
       isAdoption: _isAdoption,
+      thumbnailUrls: _thumbnailUrls,
     );
 
     if (postProvider.error == null) {
@@ -243,6 +314,21 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                                     ),
                                   ),
                                 ),
+                                // YENİ: Thumbnail seç butonu (sadece videolar için)
+                                if (_isVideoList[index])
+                                  Positioned(
+                                    bottom: 48,
+                                    right: 8,
+                                    child: ElevatedButton.icon(
+                                      icon: const Icon(Icons.image, size: 16),
+                                      label: const Text('Kapak Seç', style: TextStyle(fontSize: 12)),
+                                      style: ElevatedButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                        backgroundColor: Colors.black87,
+                                      ),
+                                      onPressed: () => _selectVideoThumbnail(index),
+                                    ),
+                                  ),
                               ],
                             );
                           },

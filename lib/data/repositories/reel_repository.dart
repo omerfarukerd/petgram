@@ -20,6 +20,7 @@ class ReelRepository {
     String? artistName,
     bool allowDuet = true,
     bool allowRemix = true,
+    String? thumbnailUrl,
   }) async {
     try {
       // Video yükle
@@ -28,7 +29,7 @@ class ReelRepository {
       final reel = ReelModel(
         id: _uuid.v4(),
         userId: userId,
-        mediaItems: [MediaItem(url: videoUrl, isVideo: true)],
+        mediaItems: [MediaItem(url: videoUrl, isVideo: true,thumbnailUrl: thumbnailUrl,)],
         caption: caption,
         likes: [],
         createdAt: DateTime.now(),

@@ -49,6 +49,9 @@ dependencies:
   connectivity_plus: ^5.0.2
   shared_preferences: ^2.2.2
   path_provider: ^2.1.1
+  just_audio: ^0.10.4
+  video_editor: ^3.0.0
+  ffmpeg_kit_flutter: ^6.0.3
 
 dev_dependencies:
   flutter_test:

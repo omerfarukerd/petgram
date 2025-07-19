@@ -147,7 +147,7 @@ class _PostItemState extends State<PostItem> {
                                   )
                           else
                             Image.network(
-                              media.url,
+                              media.thumbnailUrl ?? media.url,
                               fit: BoxFit.cover,
                               loadingBuilder: (context, child, loadingProgress) {
                                 if (loadingProgress == null) return child;
