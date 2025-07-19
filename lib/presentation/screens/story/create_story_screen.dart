@@ -621,6 +621,17 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
     );
   }
 
+  void _recordOriginalSound() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Ses kayıt özelliği geçici olarak devre dışı'),
+        backgroundColor: Colors.orange,
+      ),
+    );
+    // Ses kayıt özelliği record paketi Linux sorunu nedeniyle geçici olarak devre dışı
+    // TODO: record paketi güncellendiğinde tekrar etkinleştir
+  }
+
   Future<void> _createStory() async {
     if (_mediaFile == null) return;
 

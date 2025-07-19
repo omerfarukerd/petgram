@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/models/user_model.dart';
 import '../../data/repositories/auth_repository.dart';
 
@@ -12,6 +13,20 @@ class AuthProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
   bool get isAuthenticated => _currentUser != null;
+
+  AuthProvider() {
+    _checkAutoLogin();
+  }
+
+  Future<void> _checkAutoLogin() async {
+    final prefs = await SharedPreferences.getInstance();
+    final email = prefs.getString('email');
+    final password = prefs.getString('password');
+    
+    if (email != null && password != null) {
+      await signIn(email, password);
+    }
+  }
 
   String _getErrorMessage(dynamic error) {
     if (error is firebase_auth.FirebaseAuthException) {
@@ -56,13 +71,19 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> signIn(String email, String password) async {
+  Future<void> signIn(String email, String password, {bool rememberMe = false}) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
       _currentUser = await AuthRepository.signIn(email, password);
+      
+      if (rememberMe && _currentUser != null) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('email', email);
+        await prefs.setString('password', password);
+      }
     } catch (e) {
       _error = _getErrorMessage(e);
     }
@@ -74,6 +95,12 @@ class AuthProvider extends ChangeNotifier {
   Future<void> signOut() async {
     await AuthRepository.signOut();
     _currentUser = null;
+    
+    // Kayıtlı bilgileri temizle
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('email');
+    await prefs.remove('password');
+    
     notifyListeners();
   }
 }

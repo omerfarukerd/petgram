@@ -21,6 +21,18 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
 
+  @override
+  void initState() {
+    super.initState();
+    // Auth kontrolü
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authProvider = context.read<AuthProvider>();
+      if (!authProvider.isAuthenticated) {
+        Navigator.pushReplacementNamed(context, '/login');
+      }
+    });
+  }
+
   final List<Widget> _pages = [
     const FeedTab(),
     const ExploreTab(),

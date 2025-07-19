@@ -15,6 +15,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  bool _rememberMe = false;
 
   @override
   void dispose() {
@@ -29,6 +30,7 @@ class _LoginScreenState extends State<LoginScreen> {
       await authProvider.signIn(
         _emailController.text.trim(),
         _passwordController.text.trim(),
+        rememberMe: _rememberMe,
       );
 
       if (authProvider.error != null) {
@@ -77,6 +79,17 @@ class _LoginScreenState extends State<LoginScreen> {
                   decoration: const InputDecoration(labelText: AppTexts.password),
                   validator: Validators.password,
                   obscureText: true,
+                ),
+                const SizedBox(height: 16),
+                CheckboxListTile(
+                  title: const Text('Beni Hatırla'),
+                  value: _rememberMe,
+                  onChanged: (value) {
+                    setState(() {
+                      _rememberMe = value ?? false;
+                    });
+                  },
+                  controlAffinity: ListTileControlAffinity.leading,
                 ),
                 const SizedBox(height: 24),
                 SizedBox(

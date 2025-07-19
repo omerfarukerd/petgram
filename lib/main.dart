@@ -7,7 +7,7 @@ import 'core/theme/app_theme.dart';
 import 'presentation/providers/auth_provider.dart';
 import 'presentation/providers/post_provider.dart';
 import 'presentation/providers/user_provider.dart';
-import 'presentation/providers/message_provider.dart'; // YENİ
+import 'presentation/providers/message_provider.dart';
 import 'presentation/screens/auth/login_screen.dart';
 import 'presentation/screens/auth/register_screen.dart';
 import 'presentation/screens/home/home_screen.dart';
@@ -32,14 +32,20 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => PostProvider()),
         ChangeNotifierProvider(create: (_) => UserProvider()),
-        ChangeNotifierProvider(create: (_) => MessageProvider()), // YENİ
-        ChangeNotifierProvider(create: (_) => NotificationProvider()), //
+        ChangeNotifierProvider(create: (_) => MessageProvider()),
+        ChangeNotifierProvider(create: (_) => NotificationProvider()),
       ],
       child: MaterialApp(
         title: 'PetGram',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
-        home: const HomeScreen(),
+        home: Consumer<AuthProvider>(
+          builder: (context, authProvider, _) {
+            return authProvider.isAuthenticated 
+                ? const HomeScreen() 
+                : const LoginScreen();
+          },
+        ),
         routes: {
           '/login': (context) => const LoginScreen(),
           '/register': (context) => const RegisterScreen(),

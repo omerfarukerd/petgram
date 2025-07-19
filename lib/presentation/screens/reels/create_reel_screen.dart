@@ -40,11 +40,12 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
   void _recordOriginalSound() {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Ses kayıt özelliği için record paketini ekleyin'),
+        content: Text('Ses kayıt özelliği geçici olarak devre dışı'),
+        backgroundColor: Colors.orange,
       ),
     );
-    // record: ^5.0.4 paketini pubspec.yaml'a ekleyin
-    // Ses kayıt implementasyonu için RecordScreen oluşturun
+    // Ses kayıt özelliği record paketi Linux sorunu nedeniyle geçici olarak devre dışı
+    // TODO: record paketi güncellendiğinde tekrar etkinleştir
   }
 
   Future<void> _loadTrendingMusic() async {
